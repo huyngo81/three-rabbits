@@ -4,7 +4,7 @@ output "vpc_id" {
 }
 
 output "vodo_public_key" {
-  value = tls_private_key.vodo.public_key_openssh
+  value       = tls_private_key.vodo.public_key_openssh
   description = "output of public key demo"
 }
 
@@ -13,12 +13,12 @@ output "kms_key_arn" {
 }
 
 output "readonly_policy_arn" {
-  value = aws_iam_policy.ec2_read_only_ssm_kms.arn
+  value       = aws_iam_policy.ec2_read_only_ssm_kms.arn
   description = "read only arn"
 }
 
 output "ec2_role_readonly_arn" {
-  value = aws_iam_role.EC2ReadOnlyAccess.arn
+  value       = aws_iam_role.EC2ReadOnlyAccess.arn
   description = "EC2 role readonly arn"
 }
 

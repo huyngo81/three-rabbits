@@ -5,7 +5,7 @@ output "vpc_id" {
 
 
 output "public_key" {
-  value = module.vpc.vodo_public_key
+  value       = module.vpc.vodo_public_key
   description = "public key id"
 }
 
