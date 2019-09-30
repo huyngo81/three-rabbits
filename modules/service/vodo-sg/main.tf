@@ -1,8 +1,8 @@
 resource "aws_security_group" "allow_ssh_http_https" {
-  name = "${var.security_group_name}"
+  name        = "${var.security_group_name}"
   description = "${var.security_group_name} allow ssh-80-443"
-  vpc_id = "${var.vpc_id}"
-} 
+  vpc_id      = "${var.vpc_id}"
+}
 
 resource "aws_security_group_rule" "egress" {
   type              = "egress"
@@ -11,7 +11,7 @@ resource "aws_security_group_rule" "egress" {
   protocol          = "-1"
   cidr_blocks       = ["0.0.0.0/0"]
   description       = "All egress traffic"
-  security_group_id = "${aws_security_group.allow_ssh_http_https.id}"  
+  security_group_id = "${aws_security_group.allow_ssh_http_https.id}"
 }
 
 resource "aws_security_group_rule" "tcp" {
@@ -22,5 +22,5 @@ resource "aws_security_group_rule" "tcp" {
   protocol          = "tcp"
   cidr_blocks       = ["0.0.0.0/0"]
   description       = ""
-  security_group_id = "${aws_security_group.allow_ssh_http_https.id}"  
+  security_group_id = "${aws_security_group.allow_ssh_http_https.id}"
 }

@@ -4,7 +4,7 @@ output "vpc_id" {
 }
 
 output "vpc_cidr" {
-  value       = module.vodo_vpc.vpc_cidr_block  
+  value       = module.vodo_vpc.vpc_cidr_block
   description = "cidr vpc"
 }
 

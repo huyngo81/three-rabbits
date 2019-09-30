@@ -1,4 +1,3 @@
-
 variable "app_name" {
   type    = "string"
   default = "vodo"
@@ -35,4 +34,30 @@ variable "subnets_map" {
     "production_public"   = ["172.16.200.0/24", "172.16.201.0/24", "172.16.202.0/24"]
     "production_private"  = ["172.16.100.0/24", "172.16.101.0/24", "172.16.103.0/24"]
   }
+}
+
+variable "tcp_ports" {
+  default = "22,80,443"
+}
+
+variable "postgres_port" {
+  type        = "string"
+  description = "postgres_port"
+  default     = "5432"
+}
+
+variable "sg_webserver" {
+  default = "sg_webserver"
+}
+
+variable "sg_postgres" {
+  type        = "string"
+  description = "sg_postgres"
+  default     = "sg_postgres"
+}
+
+variable "all_sg" {
+  type        = "string"
+  description = "all_sg"
+  default     = "sg_postgres,sg_webserver"
 }

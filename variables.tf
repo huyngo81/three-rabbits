@@ -28,7 +28,7 @@ variable "workspace_to_environment" {
 }
 
 variable "port_list" {
-  type = "string"
+  type        = "string"
   description = "port_list"
-  default = "22,80,443"
+  default     = "22,80,443"
 }

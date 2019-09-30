@@ -1,12 +1,12 @@
 variable "security_group_name" {
-  type = "string"
+  type        = "string"
   description = "sg-group-allow-80-443"
-  default = "Allow_22_80_443"
+  default     = "Allow_22_80_443"
 }
 
 variable "vpc_id" {
-  type = "string"
-  description = "vpc_id"  
+  type        = "string"
+  description = "vpc_id"
 }
 
 variable "tcp_ports" {
@@ -22,7 +22,7 @@ variable "cidrs" {
 }
 
 variable "port_list" {
-  type = "string"
+  type        = "string"
   description = "port_list"
-  default = "22,80,443"
+  default     = "22,80,443"
 }

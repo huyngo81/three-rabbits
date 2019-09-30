@@ -7,7 +7,6 @@ locals {
   public_range  = "${lookup(var.subnets_map, "${terraform.workspace}_public", var.subnets_map["${var.default_environment}_public"])}"
   private_range = "${lookup(var.subnets_map, "${terraform.workspace}_private", var.subnets_map["${var.default_environment}_private"])}"
   subnet_count  = "${length(lookup(var.subnets_map, "${terraform.workspace}_private", var.subnets_map["${var.default_environment}_private"]))}"
-
 }
 
 
@@ -46,6 +45,10 @@ data "aws_availability_zones" "vodo_zones" {
 #  availability_zone = "${element(data.aws_availability_zones.vodo_zones.names,count.index)}"
 #}
 
+########################################################################################
+########################## Create VPC, public, private subnet ##########################
+########################################################################################
+
 module "vodo_vpc" {
   source = "terraform-aws-modules/vpc/aws"
 
@@ -64,6 +67,9 @@ module "vodo_vpc" {
   }
 }
 
+###################################################################################
+######################### Create key, kms, EC2ReadOnly policy, attach to role #####
+###################################################################################
 # Create aws_keypair for ec2
 resource "aws_key_pair" "vodo" {
   key_name   = "${var.app_name}"
@@ -136,3 +142,67 @@ resource "aws_iam_role_policy_attachment" "EC2ReadOnlyAccess" {
 }
 
 
+###############################################################################################
+############################### Create security group allow 22,80,443 and postgres sg group ###
+###############################################################################################
+
+resource "aws_security_group" "sg_webserver" {
+  name        = "${var.sg_webserver}"
+  description = "${var.sg_webserver} allow ssh-80-443"
+  vpc_id      = "${module.vodo_vpc.vpc_id}"
+  tags = {
+    Name = "${var.sg_webserver}"
+    env  = "${terraform.workspace}"
+  }
+}
+
+resource "aws_security_group" "sg_postgres" {
+  name        = "${var.sg_postgres}"
+  description = "${var.sg_postgres} allow postgres port to only webserver"
+  vpc_id      = "${module.vodo_vpc.vpc_id}"
+  tags = {
+    Name = "${var.sg_postgres}"
+    env  = "${terraform.workspace}"
+  }
+}
+
+
+resource "aws_security_group_rule" "egress" {
+  count = "${length(split(",", var.all_sg))}"
+  #count = "2"
+  type              = "egress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  cidr_blocks       = ["0.0.0.0/0"]
+  description       = "All egress traffic"
+  depends_on        = ["aws_security_group.sg_webserver", "aws_security_group.sg_postgres"]
+  security_group_id = "${element(split(",", "${aws_security_group.sg_webserver.id},${aws_security_group.sg_postgres.id}"), count.index)}"
+}
+
+
+
+resource "aws_security_group_rule" "webserver" {
+  count             = "${var.tcp_ports == "default_null" ? 0 : length(split(",", var.tcp_ports))}"
+  type              = "ingress"
+  from_port         = "${element(split(",", var.tcp_ports), count.index)}"
+  to_port           = "${element(split(",", var.tcp_ports), count.index)}"
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  description       = ""
+  security_group_id = "${aws_security_group.sg_webserver.id}"
+}
+
+# Create postgres rule allow from source security group of webserver
+
+resource "aws_security_group_rule" "postgres" {
+  count     = "1"
+  type      = "ingress"
+  from_port = "${var.postgres_port}"
+  to_port   = "${var.postgres_port}"
+  protocol  = "tcp"
+  #  cidr_blocks       = ["0.0.0.0/0"]
+  source_security_group_id = "${aws_security_group.sg_webserver.id}"
+  description              = ""
+  security_group_id        = "${aws_security_group.sg_postgres.id}"
+}
