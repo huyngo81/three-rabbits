@@ -3,6 +3,11 @@ output "vpc_id" {
   description = "output of vpc"
 }
 
+output "vpc_cidr" {
+  value       = module.vodo_vpc.vpc_cidr_block  
+  description = "cidr vpc"
+}
+
 output "vodo_public_key" {
   value       = tls_private_key.vodo.public_key_openssh
   description = "output of public key demo"

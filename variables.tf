@@ -27,3 +27,8 @@ variable "workspace_to_environment" {
   }
 }
 
+variable "port_list" {
+  type = "string"
+  description = "port_list"
+  default = "22,80,443"
+}

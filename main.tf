@@ -9,5 +9,12 @@ module "vpc" {
   app_name = "${var.app_name}"
 }
 
+module "allow_ssh_http_https" {
+  source = "./modules/service/vodo-sg"
+  vpc_id = "${module.vpc.vpc_id}"
+  tcp_ports           = "${var.port_list}"
+  cidrs               = "${module.vpc.vpc_cidr}"  
+}
+
 
 
