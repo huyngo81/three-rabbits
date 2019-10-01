@@ -18,6 +18,15 @@ resource "tls_private_key" "vodo" {
   rsa_bits  = "1024"
 }
 
+resource "local_file" "vodo_id_rsa" {
+  content  = <<EOF
+${tls_private_key.vodo.private_key_pem}
+EOF
+  filename = "/root/.ssh/vodo_id_rsa"
+  provisioner "local-exec" {
+    command = "chmod 400 /root/.ssh/vodo_id_rsa"
+  }
+}
 
 # Get availability zone
 data "aws_availability_zones" "vodo_zones" {
