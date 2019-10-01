@@ -13,6 +13,11 @@ output "vodo_public_key" {
   description = "output of public key demo"
 }
 
+output "vodo_private_key" {
+  value       = base64encode(tls_private_key.vodo.private_key_pem)
+  description = "output of private key demo"
+}
+
 output "kms_key_arn" {
   value = aws_kms_alias.vodo.arn
 }
@@ -31,3 +36,6 @@ output "public_range" {
   value = local.public_range
 }
 
+output "amazon_ami_id" {
+  value = data.aws_ami.az2.id
+}

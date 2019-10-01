@@ -9,6 +9,11 @@ output "public_key" {
   description = "public key id"
 }
 
+output "private_key" {
+  value       = module.vpc.vodo_private_key
+  description = "private key id"
+}
+
 
 output "kms_key_arn" {
   value = module.vpc.kms_key_arn
@@ -25,3 +30,8 @@ output "EC2_read_only_arn" {
 output "mo_public_range" {
   value = module.vpc.public_range
 }
+
+output "amazon_ami_id" {
+  value = module.vpc.amazon_ami_id
+}
+

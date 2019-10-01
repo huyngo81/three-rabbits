@@ -61,3 +61,14 @@ variable "all_sg" {
   description = "all_sg"
   default     = "sg_postgres,sg_webserver"
 }
+
+variable "workspace_to_instance_type" {
+  type        = "map"
+  description = "this variable to map the workspace to cidrs base on workspace name"
+  default = {
+    development = "t2.micro"
+    production  = "t2.medium"
+  }
+}
+
+

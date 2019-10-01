@@ -1,4 +1,6 @@
-# This module to create a mini stack vpc, ec2, rds, kms
+###############################################################
+# This module to create a mini stack vpc, ec2, rds, kms 
+###############################################################
 
 # Make sure environment had been define and cidr had been define
 locals {
@@ -6,7 +8,7 @@ locals {
   cidr          = "${lookup(var.workspace_to_cidr, terraform.workspace, var.workspace_to_cidr[var.default_environment])}"
   public_range  = "${lookup(var.subnets_map, "${terraform.workspace}_public", var.subnets_map["${var.default_environment}_public"])}"
   private_range = "${lookup(var.subnets_map, "${terraform.workspace}_private", var.subnets_map["${var.default_environment}_private"])}"
-  subnet_count  = "${length(lookup(var.subnets_map, "${terraform.workspace}_private", var.subnets_map["${var.default_environment}_private"]))}"
+  instance_type = "${lookup(var.workspace_to_instance_type, "${terraform.workspace}", var.workspace_to_instance_type["${var.default_environment}"])}"
 }
 
 
@@ -14,11 +16,10 @@ locals {
 resource "tls_private_key" "vodo" {
   algorithm = "RSA"
   rsa_bits  = "1024"
-
 }
 
 
-# get availability zone
+# Get availability zone
 data "aws_availability_zones" "vodo_zones" {
   state = "available"
 }
@@ -142,6 +143,11 @@ resource "aws_iam_role_policy_attachment" "EC2ReadOnlyAccess" {
 }
 
 
+resource "aws_iam_instance_profile" "EC2ReadOnlyAccess" {
+  name = "EC2ReadOnlyAccess"
+  role = "${aws_iam_role.EC2ReadOnlyAccess.name}"
+}
+
 ###############################################################################################
 ############################### Create security group allow 22,80,443 and postgres sg group ###
 ###############################################################################################
@@ -205,4 +211,55 @@ resource "aws_security_group_rule" "postgres" {
   source_security_group_id = "${aws_security_group.sg_webserver.id}"
   description              = ""
   security_group_id        = "${aws_security_group.sg_postgres.id}"
+}
+
+#####################################################################
+########### Create EC2 WebServer ####################################
+#####################################################################
+
+# Get Amazon Linux 2 AMI
+data "aws_ami" "az2" {
+  most_recent = true
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-2.0.20190823.1-x86_64-gp2"]
+  }
+
+  owners = ["137112412989"]
+}
+
+data "aws_subnet_ids" "public" {
+  vpc_id = "${module.vodo_vpc.vpc_id}"
+  filter {
+    name   = "tag:Name"
+    values = ["*public*"]
+  }
+}
+
+
+
+resource "random_pet" "webserver" {}
+
+
+resource "aws_instance" "webserver" {
+  count = "${terraform.workspace == "development" ? "1" : "${length(data.aws_subnet_ids.public.ids)}"}"
+  #count = "${length(data.aws_subnet_ids.public.ids)}"
+  ami           = "${data.aws_ami.az2.id}"
+  instance_type = "${local.instance_type}"
+  tags = {
+    Name = "webserver-${random_pet.webserver.id}"
+    env  = "${terraform.workspace}"
+  }
+  root_block_device {
+    volume_size = "16"
+  }
+  associate_public_ip_address = true
+  subnet_id                   = "${element(tolist(data.aws_subnet_ids.public.ids), count.index)}"
+  iam_instance_profile        = "${aws_iam_instance_profile.EC2ReadOnlyAccess.name}"
+  key_name                    = "${aws_key_pair.vodo.key_name}"
+  vpc_security_group_ids      = ["${aws_security_group.sg_webserver.id}"]
+  lifecycle {
+    create_before_destroy = true
+  }
+
 }
