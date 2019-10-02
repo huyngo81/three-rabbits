@@ -344,7 +344,7 @@ resource "aws_ssm_parameter" "db_password" {
   name        = "/${terraform.workspace}/database/password/master"
   description = "store database secure password"
   type        = "SecureString"
-  value       = "${random_password.postgres.keepers.user}"
+  value       = "${random_password.postgres.result}"
   tags = {
     env  = "${terraform.workspace}"
     Name = "${var.db_name}_secured_password"
