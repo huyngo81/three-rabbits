@@ -31,6 +31,9 @@ output "mo_public_range" {
   value = module.vpc.public_range
 }
 
+output "postgres_password" {
+  value = module.vpc.postgres_password
+}
 output "amazon_ami_id" {
   value = module.vpc.amazon_ami_id
 }

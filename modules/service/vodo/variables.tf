@@ -71,4 +71,18 @@ variable "workspace_to_instance_type" {
   }
 }
 
+variable "db_instance_type" {
+  type        = "map"
+  description = "this variable to map the workspace to cidrs base on workspace name"
+  default = {
+    development = "db.t2.micro"
+    production  = "db.t2.medium"
+  }
+}
 
+
+variable "db_name" {
+  type = "string"
+  description = "postgres db name"
+  default = "postgres"
+}

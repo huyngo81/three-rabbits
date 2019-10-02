@@ -39,3 +39,7 @@ output "public_range" {
 output "amazon_ami_id" {
   value = data.aws_ami.az2.id
 }
+
+output "postgres_password" {
+  value = random_password.postgres.keepers.user
+}

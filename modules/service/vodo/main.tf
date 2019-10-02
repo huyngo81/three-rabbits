@@ -9,7 +9,9 @@ locals {
   public_range  = "${lookup(var.subnets_map, "${terraform.workspace}_public", var.subnets_map["${var.default_environment}_public"])}"
   private_range = "${lookup(var.subnets_map, "${terraform.workspace}_private", var.subnets_map["${var.default_environment}_private"])}"
   instance_type = "${lookup(var.workspace_to_instance_type, "${terraform.workspace}", var.workspace_to_instance_type["${var.default_environment}"])}"
+  db_type = "${lookup(var.db_instance_type, "${terraform.workspace}", var.db_instance_type["${var.default_environment}"])}"
 }
+
 
 
 # Create public and private key to use as ssh key pair
@@ -245,6 +247,9 @@ data "aws_subnet_ids" "public" {
   }
 }
 
+data "aws_subnet_ids" "all_subnets" {
+  vpc_id = "${module.vodo_vpc.vpc_id}"  
+}
 
 
 resource "random_pet" "webserver" {}
@@ -271,4 +276,72 @@ resource "aws_instance" "webserver" {
     create_before_destroy = true
   }
 
+}
+
+################################################################
+################## Create and RDS###############################
+################################################################
+
+# Generate DB Password random without special character
+resource "random_password" "postgres" {
+  length = 16
+  special = false
+  keepers = {
+    user = "${var.db_name}"
+  }
+}
+
+resource "aws_db_subnet_group" "postgres" {
+  name       = "main"
+  subnet_ids = data.aws_subnet_ids.all_subnets.ids
+
+  tags = {
+    Name = "${var.db_name}-subnet-group"
+    env = "{terraform.workspace}"
+  }
+}
+
+# Deploy Postgres DB
+module "postgres" {
+  
+  source = "terraform-aws-modules/rds/aws"
+  db_subnet_group_name = "${aws_db_subnet_group.postgres.id}"  
+  identifier = "${var.db_name}"
+  engine = "${var.db_name}"
+  engine_version = "11.4"
+  instance_class = "${local.db_type}"
+  allocated_storage = "20"
+  name = "${var.db_name}"
+  username = "${var.db_name}"
+  password = "${random_password.postgres.keepers.user}"
+  vpc_security_group_ids = ["${aws_security_group.sg_postgres.id}"]
+  backup_retention_period = 0
+  subnet_ids = data.aws_subnet_ids.all_subnets.ids
+  family = "postgres11.4"
+  major_engine_version = "11.4"
+  final_snapshot_identifier = "${var.db_name}"
+  deletion_protection = false
+  port = "5432"
+  maintenance_window = "Mon:00:00-Mon:03:00"
+  backup_window      = "03:00-06:00"
+  tags = {
+    Name = "${var.db_name}"
+    env = "${terraform.workspace}"
+  }
+  publicly_accessible = true
+
+}
+
+# Store db password to ssm
+
+resource "aws_ssm_parameter" "db_password" {
+  name = "/${terraform.workspace}/database/password/master"
+  description = "store database secure password"
+  type        = "SecureString"
+  value = "${random_password.postgres.keepers.user}"
+  tags = {
+    env = "${terraform.workspace}"
+    Name  = "${var.db_name}_secured_password"
+  key_id = "${aws_kms_alias.vodo.arn}"
+  }
 }
