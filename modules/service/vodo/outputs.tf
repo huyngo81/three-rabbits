@@ -41,5 +41,5 @@ output "amazon_ami_id" {
 }
 
 output "postgres_password" {
-  value = random_password.postgres.keepers.user
+  value = random_password.postgres.result
 }

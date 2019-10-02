@@ -82,7 +82,7 @@ variable "db_instance_type" {
 
 
 variable "db_name" {
-  type = "string"
+  type        = "string"
   description = "postgres db name"
-  default = "postgres"
+  default     = "postgres"
 }
