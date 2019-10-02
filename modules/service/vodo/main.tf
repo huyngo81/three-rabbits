@@ -35,27 +35,6 @@ data "aws_availability_zones" "vodo_zones" {
   state = "available"
 }
 
-# Create a new vpc base on cidr lookup
-#resource "aws_vpc" "vodo" {
-#  cidr_block = "${local.cidr}"
-#  tags = {
-#    env  = "${local.environment}"
-#    Name = "${var.app_name}"
-#  }
-#}
-
-#resource "aws_internet_gateway" "cluster_gateway" {
-#  vpc_id = "${aws_vpc.vodo.id}"
-#}
-
-#resource "aws_subnet" "public_subnet" {
-#  count = "${length(local.public_range)}"
-#  vpc_id = "${aws_vpc.vodo.id}"
-#  cidr_block = "${element(local.public_range,count.index)}"
-#  map_public_ip_on_launch = true
-#  depends_on = ["aws_internet_gateway.cluster_gateway"]
-#  availability_zone = "${element(data.aws_availability_zones.vodo_zones.names,count.index)}"
-#}
 
 ########################################################################################
 ########################## Create VPC, public, private subnet ##########################
