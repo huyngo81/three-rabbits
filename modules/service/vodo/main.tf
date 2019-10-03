@@ -42,7 +42,7 @@ data "aws_availability_zones" "vodo_zones" {
 
 module "vodo_vpc" {
   source = "terraform-aws-modules/vpc/aws"
-
+  version = "~> 2.0"
   name            = "${var.app_name}"
   cidr            = "${local.cidr}"
   azs             = "${data.aws_availability_zones.vodo_zones.names}"
@@ -232,6 +232,17 @@ data "aws_subnet_ids" "public" {
   }
 }
 
+
+
+data "aws_subnet_ids" "public_1a" {
+  vpc_id = "${module.vodo_vpc.vpc_id}"
+  filter {
+    name   = "tag:Name"
+    values = ["*public-ap-southeast-1a*"]
+  }
+}
+
+
 data "aws_subnet_ids" "all_subnets" {
   vpc_id = "${module.vodo_vpc.vpc_id}"
 }
@@ -253,7 +264,7 @@ resource "aws_instance" "webserver" {
     volume_size = "16"
   }
   associate_public_ip_address = true
-  subnet_id                   = "${element(tolist(data.aws_subnet_ids.public.ids), count.index)}"
+  subnet_id                   = "${terraform.workspace == "development" ? "${element(tolist(data.aws_subnet_ids.public_1a.ids), count.index)}" : "${element(tolist(data.aws_subnet_ids.public.ids), count.index)}" }"
   iam_instance_profile        = "${aws_iam_instance_profile.EC2ReadOnlyAccess.name}"
   key_name                    = "${aws_key_pair.vodo.key_name}"
   vpc_security_group_ids      = ["${aws_security_group.sg_webserver.id}"]
@@ -290,6 +301,7 @@ resource "aws_db_subnet_group" "postgres" {
 module "postgres" {
 
   source                    = "terraform-aws-modules/rds/aws"
+  version = "~> 2.0"
   db_subnet_group_name      = "${aws_db_subnet_group.postgres.id}"
   identifier                = "${var.db_name}"
   engine                    = "${var.db_name}"
