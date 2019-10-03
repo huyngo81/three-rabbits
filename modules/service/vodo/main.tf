@@ -42,7 +42,8 @@ data "aws_availability_zones" "vodo_zones" {
 
 module "vodo_vpc" {
   source = "terraform-aws-modules/vpc/aws"
-  version = "~> 2.0"
+  #  source = "../terraform-aws-modules"
+  version         = "~> 2.0"
   name            = "${var.app_name}"
   cidr            = "${local.cidr}"
   azs             = "${data.aws_availability_zones.vodo_zones.names}"
@@ -230,6 +231,7 @@ data "aws_subnet_ids" "public" {
     name   = "tag:Name"
     values = ["*public*"]
   }
+  depends_on = ["module.vodo_vpc"]
 }
 
 
@@ -240,7 +242,10 @@ data "aws_subnet_ids" "public_1a" {
     name   = "tag:Name"
     values = ["*public-ap-southeast-1a*"]
   }
+  depends_on = ["module.vodo_vpc"]
+
 }
+
 
 
 data "aws_subnet_ids" "all_subnets" {
@@ -264,7 +269,7 @@ resource "aws_instance" "webserver" {
     volume_size = "16"
   }
   associate_public_ip_address = true
-  subnet_id                   = "${terraform.workspace == "development" ? "${element(tolist(data.aws_subnet_ids.public_1a.ids), count.index)}" : "${element(tolist(data.aws_subnet_ids.public.ids), count.index)}" }"
+  subnet_id                   = "${terraform.workspace == "development" ? "${element(tolist(data.aws_subnet_ids.public_1a.ids), count.index)}" : "${element(tolist(data.aws_subnet_ids.public.ids), count.index)}"}"
   iam_instance_profile        = "${aws_iam_instance_profile.EC2ReadOnlyAccess.name}"
   key_name                    = "${aws_key_pair.vodo.key_name}"
   vpc_security_group_ids      = ["${aws_security_group.sg_webserver.id}"]
@@ -287,10 +292,10 @@ resource "random_password" "postgres" {
   }
 }
 
+
 resource "aws_db_subnet_group" "postgres" {
   name       = "postgres"
   subnet_ids = data.aws_subnet_ids.all_subnets.ids
-
   tags = {
     Name = "postgres_subnetGroup"
     env  = "${terraform.workspace}"
@@ -300,9 +305,11 @@ resource "aws_db_subnet_group" "postgres" {
 # Deploy Postgres DB
 module "postgres" {
 
-  source                    = "terraform-aws-modules/rds/aws"
-  version = "~> 2.0"
-  db_subnet_group_name      = "${aws_db_subnet_group.postgres.id}"
+  source = "../terraform-aws-rds"
+  #  version = "~> 2.0"
+  create_db_instance   = false
+  db_subnet_group_name = "${aws_db_subnet_group.postgres.id}"
+  #  db_subnet_group_name      = "postgres"
   identifier                = "${var.db_name}"
   engine                    = "${var.db_name}"
   engine_version            = "11.4"
