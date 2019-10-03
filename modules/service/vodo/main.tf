@@ -250,6 +250,7 @@ data "aws_subnet_ids" "public_1a" {
 
 data "aws_subnet_ids" "all_subnets" {
   vpc_id = "${module.vodo_vpc.vpc_id}"
+  depends_on = ["module.vodo_vpc"]
 }
 
 
@@ -305,7 +306,8 @@ resource "aws_db_subnet_group" "postgres" {
 # Deploy Postgres DB
 module "postgres" {
 
-  source = "../terraform-aws-rds"
+  #source = "../terraform-aws-rds"
+  source = "git@github.com:huyngo81/terraform-aws-rds.git"
   #  version = "~> 2.0"
   create_db_instance   = false
   db_subnet_group_name = "${aws_db_subnet_group.postgres.id}"
