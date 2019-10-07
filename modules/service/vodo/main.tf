@@ -249,7 +249,7 @@ data "aws_subnet_ids" "public_1a" {
 
 
 data "aws_subnet_ids" "all_subnets" {
-  vpc_id = "${module.vodo_vpc.vpc_id}"
+  vpc_id     = "${module.vodo_vpc.vpc_id}"
   depends_on = ["module.vodo_vpc"]
 }
 
@@ -330,6 +330,7 @@ module "postgres" {
   port                      = "5432"
   maintenance_window        = "Mon:00:00-Mon:03:00"
   backup_window             = "03:00-06:00"
+  create_db_subnet_group    = false
   tags = {
     Name = "${var.db_name}"
     env  = "${terraform.workspace}"

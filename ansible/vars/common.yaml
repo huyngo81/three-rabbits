@@ -1,0 +1,22 @@
+packages:
+  - gcc
+  - python-pip
+  - python-devel
+  - postgresql-libs
+  - postgresql-contrib
+  - postgresql
+  - postgresql-devel
+  - python-setuptools
+
+python: 
+  - boto3
+  - botocore
+  - boto
+  - virtualenv  
+
+django:
+  base_dir: "/opt/{{ project }}"
+  rds_user: "postgres"
+  rds_identifier: "postgres"
+  rds_database: "postgres"
+  venvs_dir: "venvs/{{ project }}"
