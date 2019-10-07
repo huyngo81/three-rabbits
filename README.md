@@ -16,9 +16,13 @@
 
   ## How to run: 
   terraform workspace new development
+  
   terraform init
+  
   terraform plan
+  
   terraform apply
+  
 
 
 
