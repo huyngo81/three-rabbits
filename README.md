@@ -62,6 +62,7 @@
   
   ## How to run Ansible
   cd Ansible
+  
   make configure-webserver-gfg aws_profile=development project=gfg env=stg aws_region=ap-southeast-1
 
 
