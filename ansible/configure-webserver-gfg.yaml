@@ -24,7 +24,6 @@
   become: yes
   vars_files:
     - vars/common.yaml
-    - vars/secret.yaml
   roles:
     - configure-webserver
 
