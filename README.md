@@ -16,7 +16,7 @@
 
   ## Tree
   (py3-ansible) [root@puppet three-rabbits]# tree 
-.
+```
 ├── ansible
 │   ├── ansible.cfg
 │   ├── configure-webserver-gfg.yaml
@@ -51,7 +51,7 @@
 │           └── variables.tf
 ├── outputs.tf
 ├── variables.tf
-
+```
 
   ## How to run terraform
   Export AWS_ACCESS_KEY and AWS_ACCESS_SECRET_KEY
