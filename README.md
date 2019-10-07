@@ -13,3 +13,13 @@
     - Terraform: deploy new VPC with 3 AZ, each zone has two public and private subnet, internet gateway, nat gateway, elb, asg,  rds with public ip encrypted by KMS, 
     RDS and EC2 instance is on private subnet access via ELB and go out via NAT Gateway
     - Ansible: input a deploy type: ec2instance, ecs, fargate, lambda to deploy sample web applycation base on input
+
+  ## How to run: 
+  terraform workspace new development
+  terraform init
+  terraform plan
+  terraform apply
+
+
+
+
