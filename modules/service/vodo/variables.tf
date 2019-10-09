@@ -36,6 +36,11 @@ variable "subnets_map" {
   }
 }
 
+variable "az" {
+  type = list(string)
+  default = ["ap-southeast-1a","ap-southeast-1b","ap-southeast-1c"]
+}
+
 variable "tcp_ports" {
   default = "22,80,443"
 }
@@ -67,7 +72,7 @@ variable "workspace_to_instance_type" {
   description = "this variable to map the workspace to cidrs base on workspace name"
   default = {
     development = "t2.micro"
-    production  = "t2.medium"
+    production  = "t2.nano"
   }
 }
 
@@ -76,7 +81,7 @@ variable "db_instance_type" {
   description = "this variable to map the workspace to cidrs base on workspace name"
   default = {
     development = "db.t2.micro"
-    production  = "db.t2.medium"
+    production  = "db.t2.micro"
   }
 }
 

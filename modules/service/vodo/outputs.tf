@@ -43,3 +43,8 @@ output "amazon_ami_id" {
 output "postgres_password" {
   value = random_password.postgres.result
 }
+
+
+output "bastion_public_ip" {
+  value = aws_instance.bastion.0.public_ip
+}

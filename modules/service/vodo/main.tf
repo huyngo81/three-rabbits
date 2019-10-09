@@ -20,20 +20,20 @@ resource "tls_private_key" "vodo" {
   rsa_bits  = "1024"
 }
 
-resource "local_file" "vodo_id_rsa" {
-  content  = <<EOF
-${tls_private_key.vodo.private_key_pem}
-EOF
-  filename = "/root/.ssh/vodo_id_rsa"
-  provisioner "local-exec" {
-    command = "chmod 400 /root/.ssh/vodo_id_rsa"
-  }
-}
+#resource "local_file" "vodo_id_rsa" {
+#  content  = <<EOF
+#${tls_private_key.vodo.private_key_pem}
+#EOF
+#  filename = "/root/.ssh/vodo_id_rsa"
+#  provisioner "local-exec" {
+#    command = "chmod 400 /root/.ssh/vodo_id_rsa"
+#  }
+#}
 
 # Get availability zone
-data "aws_availability_zones" "vodo_zones" {
-  state = "available"
-}
+#data "aws_availability_zones" "vodo_zones" {
+#  state = "available"
+#}
 
 
 ########################################################################################
@@ -46,13 +46,13 @@ module "vodo_vpc" {
   version         = "~> 2.0"
   name            = "${var.app_name}"
   cidr            = "${local.cidr}"
-  azs             = "${data.aws_availability_zones.vodo_zones.names}"
+  azs             = "${var.az}"
   private_subnets = "${local.private_range}"
   public_subnets  = "${local.public_range}"
 
-  enable_nat_gateway = false
+  enable_nat_gateway = true
   enable_vpn_gateway = false
-  single_nat_gateway = false
+  single_nat_gateway = true
   tags = {
     app = "${var.app_name}"
     env = "${terraform.workspace}"
@@ -77,14 +77,14 @@ resource "aws_key_pair" "vodo" {
 # Create KMS key and alias
 resource "aws_kms_key" "mykey" {}
 resource "aws_kms_alias" "vodo" {
-  name          = "alias/${var.app_name}"
+  name          = "alias/${var.app_name}1"
   target_key_id = "${aws_kms_key.mykey.key_id}"
 }
 
 
 # Create custom policy to assume role to EC2 for ssm and kms read only
 resource "aws_iam_policy" "ec2_read_only_ssm_kms" {
-  name        = "ReadOnlyAccess"
+  name        = "${var.app_name}ReadOnlyAccess"
   path        = "/"
   description = "EC2 read only SSM and KMS"
   policy      = <<EOF
@@ -225,40 +225,9 @@ data "aws_ami" "az2" {
   owners = ["137112412989"]
 }
 
-data "aws_subnet_ids" "public" {
-  vpc_id = "${module.vodo_vpc.vpc_id}"
-  filter {
-    name   = "tag:Name"
-    values = ["*public*"]
-  }
-  depends_on = ["module.vodo_vpc"]
-}
-
-
-
-data "aws_subnet_ids" "public_1a" {
-  vpc_id = "${module.vodo_vpc.vpc_id}"
-  filter {
-    name   = "tag:Name"
-    values = ["*public-ap-southeast-1a*"]
-  }
-  depends_on = ["module.vodo_vpc"]
-
-}
-
-
-
-data "aws_subnet_ids" "all_subnets" {
-  vpc_id     = "${module.vodo_vpc.vpc_id}"
-  depends_on = ["module.vodo_vpc"]
-}
-
-
 resource "random_pet" "webserver" {}
-
-
 resource "aws_instance" "webserver" {
-  count = "${terraform.workspace == "development" ? "1" : "${length(data.aws_subnet_ids.public.ids)}"}"
+  count = "${terraform.workspace == "development" ? "1" : "${length(module.vodo_vpc.private_subnets)}"}"
   #count = "${length(data.aws_subnet_ids.public.ids)}"
   ami           = "${data.aws_ami.az2.id}"
   instance_type = "${local.instance_type}"
@@ -269,8 +238,9 @@ resource "aws_instance" "webserver" {
   root_block_device {
     volume_size = "16"
   }
-  associate_public_ip_address = true
-  subnet_id                   = "${terraform.workspace == "development" ? "${element(tolist(data.aws_subnet_ids.public_1a.ids), count.index)}" : "${element(tolist(data.aws_subnet_ids.public.ids), count.index)}"}"
+  source_dest_check = false
+  associate_public_ip_address = false
+  subnet_id                   = "${terraform.workspace == "development" ? "${element(module.vodo_vpc.private_subnets, count.index)}" : "${element(module.vodo_vpc.private_subnets, count.index)}"}"
   iam_instance_profile        = "${aws_iam_instance_profile.EC2ReadOnlyAccess.name}"
   key_name                    = "${aws_key_pair.vodo.key_name}"
   vpc_security_group_ids      = ["${aws_security_group.sg_webserver.id}"]
@@ -279,6 +249,37 @@ resource "aws_instance" "webserver" {
   }
 
 }
+
+#####################################################################
+########### Create EC2 Bastion Host ####################################
+#####################################################################
+
+resource "aws_instance" "bastion" {
+  count = "1"
+  #count = "${length(data.aws_subnet_ids.public.ids)}"
+  ami           = "${data.aws_ami.az2.id}"
+  instance_type = "${local.instance_type}"
+  tags = {
+    Name = "bastion"
+    env  = "${terraform.workspace}"
+  }
+  root_block_device {
+    volume_size = "16"
+  }
+  source_dest_check = false
+  associate_public_ip_address = true
+  subnet_id                   = "${terraform.workspace == "development" ? "${element(module.vodo_vpc.public_subnets, count.index)}" : "${element(module.vodo_vpc.public_subnets, count.index)}"}"
+  iam_instance_profile        = "${aws_iam_instance_profile.EC2ReadOnlyAccess.name}"
+  key_name                    = "${aws_key_pair.vodo.key_name}"
+  vpc_security_group_ids      = ["${aws_security_group.sg_webserver.id}"]
+  lifecycle {
+    create_before_destroy = true
+  }
+
+}
+
+
+
 
 ################################################################
 ################## Create and RDS###############################
@@ -296,7 +297,7 @@ resource "random_password" "postgres" {
 
 resource "aws_db_subnet_group" "postgres" {
   name       = "postgres"
-  subnet_ids = data.aws_subnet_ids.all_subnets.ids
+  subnet_ids = concat(module.vodo_vpc.public_subnets,module.vodo_vpc.private_subnets)
   tags = {
     Name = "postgres_subnetGroup"
     env  = "${terraform.workspace}"
@@ -322,7 +323,7 @@ module "postgres" {
   password                  = "${random_password.postgres.result}"
   vpc_security_group_ids    = ["${aws_security_group.sg_postgres.id}"]
   backup_retention_period   = 0
-  subnet_ids                = data.aws_subnet_ids.all_subnets.ids
+  subnet_ids                = concat(module.vodo_vpc.public_subnets,module.vodo_vpc.private_subnets)
   family                    = "postgres11"
   major_engine_version      = "11.4"
   final_snapshot_identifier = "${var.db_name}"
@@ -335,7 +336,7 @@ module "postgres" {
     Name = "${var.db_name}"
     env  = "${terraform.workspace}"
   }
-  publicly_accessible = true
+  publicly_accessible = false
 
 }
 
@@ -351,5 +352,8 @@ resource "aws_ssm_parameter" "db_password" {
     Name = "${var.db_name}_secured_password"
   }
   key_id = "${aws_kms_alias.vodo.arn}"
+  overwrite = true
 
 }
+
+
