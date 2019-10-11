@@ -1,9 +1,9 @@
 --- 
-- name: get public ip webserver base on fact
+- name: get public ip bastion base on fact
   ec2_instance_facts:
     region: "{{ aws_region }}"
     filters:
-      "tag:Name": "webserver*"
+      "tag:Name": "bastion"
   register: webserver_info
 
 - name: debug bastion infor
@@ -14,7 +14,7 @@
 - name: add host bastion to ansible inventory
   add_host:
     hostname: "{{ webserver_info.instances[0].public_ip_address }}"
-    groups: webserver
+    groups: bastion
     ansible_ssh_user: "ec2-user"
     ansible_ssh_private_key_file: "/root/.ssh/vodo_id_rsa"
 
@@ -36,3 +36,31 @@
 - name: set_facts webserver public_ip
   set_fact:
     web_publicIp: "{{ webserver_info.instances[0].public_ip_address }}"
+
+- name: get vpc id from terraform
+  shell: |
+    terraform output vpc_id
+  args:
+    chdir: "{{ playbook_dir }}/../"
+  register: vpc_id
+
+- name: debug vpc_id
+  debug:
+    var: vpc_id
+
+- name: get vpc_cidr from vpc_id
+  ec2_vpc_net_facts:
+    vpc_ids: ["{{ vpc_id.stdout }}"]
+    region: "{{ aws_region }}"
+  register: vpc_net_fact
+
+
+- name: debug vpc_net_fact
+  debug:
+#    var: vpc_net_fact
+    msg: "cidr = {{ vpc_net_fact.vpcs[0].cidr_block.split('.')[0] }}.{{  vpc_net_fact.vpcs[0].cidr_block.split('.')[1] }}"
+
+- name: create ssh config file
+  template: 
+    src: ssh_config.j2
+    dest: /root/.ssh/config

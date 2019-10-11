@@ -15,17 +15,20 @@
   roles:
     - add_webserver_to_inventory_memory
 
+- hosts: tag_Name_webserver_needed_swine
+  gather_facts: false
+  tasks:
+    - ping:
 
 
-
-- name: configure webserver
-  hosts: "webserver"
-  gather_facts: no
-  become: yes
-  vars_files:
-    - vars/common.yaml
-  roles:
-    - configure-webserver
+#- name: configure webserver
+#  hosts: "webserver"
+#  gather_facts: no
+#  become: yes
+#  vars_files:
+#    - vars/common.yaml
+#  roles:
+#    - configure-webserver
 
 
   

@@ -20,3 +20,7 @@ django:
   rds_identifier: "postgres"
   rds_database: "postgres"
   venvs_dir: "venvs/{{ project }}"
+
+
+bastion:
+  username: "ec2-user"
