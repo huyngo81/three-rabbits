@@ -1,0 +1,123 @@
+---
+- name: install python-pip 
+  yum:
+    name: "{{ packages }}"
+    state: latest
+
+- name: install boto3 and boto core
+  pip: 
+    name: "{{ python }}"
+
+- name: lookup ss password
+  set_fact: 
+    postgres_secret: "{{ lookup('aws_ssm', '/{{ aws_profile }}/database/password/master') }}"
+
+- name: create init_sql file
+  template:
+    src: init_postgres.sql
+    dest: /tmp/init_postgres.sql
+
+
+- name: execute sql init db
+  shell: 
+    bash -c "PGPASSWORD={{ postgres_secret }} psql -h {{ hostvars['localhost']['rds_endpoint'] }} -U {{ django.rds_user }} -d {{ django.rds_database }} -f /tmp/init_postgres.sql"
+  become: yes
+  become_user: postgres
+  args:
+    creates: "/tmp/init_postgres.sql"
+
+- name: create base project "{{ django.base_dir }}"
+  file:
+    path: "{{ django.base_dir }}"
+    state: directory
+
+- name: create file
+  copy:
+    dest: "{{ django.base_dir }}/requirement.txt"
+    content: |
+      django 
+      psycopg2
+ 
+
+- name: install django and postgres lib
+  pip: 
+    requirements: "{{ django.base_dir }}/requirement.txt"
+    virtualenv: "{{ django.base_dir }}/venvs/{{ project }}"
+
+- name: activate virtual env
+  shell: |
+    source "{{ django.base_dir }}/venvs/{{ project }}/bin/activate"
+
+
+- name: django | create new django project  
+  shell: "{{ django.venvs_dir }}/bin/django-admin.py startproject project_{{ project }} ."
+  args:
+    chdir: '{{ django.base_dir }}'
+    creates: '{{ django.base_dir }}/project_{{ project }}/'
+
+- name: django | check if postgres db engine is configured
+  shell: |
+    grep -q postgresql_psycopg2 project_{{ project }}/settings.py
+  args:
+    chdir: "{{ django.base_dir }}"
+  ignore_errors: yes
+  register: postgres_info
+
+- name: django | delete DATABASE sqlite setting on setting.py
+  shell: |
+    sed -e '/DATABASES\ \=/,+5d' -i project_{{ project }}/settings.py
+  args:
+    chdir: "{{ django.base_dir }}"
+  when: postgres_info.rc != 0
+
+- name: django | change allow_host to {{ hostvars['localhost']['web_publicIp'] }}
+  shell: |
+    sed -i "s/ALLOWED_HOSTS \=\ \[\]/ALLOWED_HOSTS = \['{{ hostvars['localhost']['web_publicIp'] }}'\]/"  project_{{ project }}/settings.py
+  args:
+    chdir: "{{ django.base_dir }}"
+  
+
+
+- name: django | add Postgres database configure to end of setting.py file
+  blockinfile:
+    path: "{{ django.base_dir }}/project_{{ project }}/settings.py"
+    block: |
+      DATABASES = {
+        'default': {
+          'ENGINE': 'django.db.backends.postgresql_psycopg2',
+          'NAME': '{{ project }}',
+          'USER': '{{ project }}',
+          'PASSWORD': '{{ postgres_secret }}',
+          'HOST': '{{ hostvars['localhost']['rds_endpoint'] }}',
+          'PORT': '5432',
+        }
+      }
+    insertafter: EOF
+  when: postgres_info.rc != 0
+
+
+- name: django | migrate database
+  shell: |
+    ./venvs/{{ project }}/bin/python manage.py makemigrations
+    ./venvs/{{ project }}/bin/python manage.py migrate
+  args:
+    chdir: "{{ django.base_dir }}"
+
+
+- name: django | create supper user
+  shell: |
+    echo "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('admin', 'huy.ngo@vdevops.io', '{{ postgres_secret }}') if not User.objects.filter(username='admin').exists() else '',"|  ./venvs/{{ project }}/bin/python manage.py shell
+  args:
+    chdir: "{{ django.base_dir }}"
+
+- name: django | kill django before start
+  shell: |
+    pkill -f "python manage.py runserver"
+  ignore_errors: yes
+
+- name: django | strat server
+  shell: |
+    nohup ./venvs/{{ project }}/bin/python manage.py runserver 0.0.0.0:80 &
+  args:
+    chdir: "{{ django.base_dir }}"
+

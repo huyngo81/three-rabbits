@@ -1,0 +1,31 @@
+#####################################################
+#Author: Huy Ngo
+#Email: ndahuy@gmail.com
+#####################################################
+
+
+---
+- name: detect webserver public ip and add host to memory
+  hosts: "localhost"    
+  gather_facts: no
+  vars_files:
+    - vars/common.yaml
+  become: yes
+
+  roles:
+    - add_webserver_to_inventory_memory
+
+
+
+
+- name: configure webserver
+  hosts: "webserver"
+  gather_facts: no
+  become: yes
+  vars_files:
+    - vars/common.yaml
+  roles:
+    - configure-webserver
+
+
+  

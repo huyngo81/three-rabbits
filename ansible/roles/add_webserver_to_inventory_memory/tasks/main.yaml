@@ -1,0 +1,38 @@
+--- 
+- name: get public ip webserver base on fact
+  ec2_instance_facts:
+    region: "{{ aws_region }}"
+    filters:
+      "tag:Name": "webserver*"
+  register: webserver_info
+
+- name: debug bastion infor
+  debug:
+    msg: "puclic_ip: {{ webserver_info.instances[0].public_ip_address }}, instace_id: {{ webserver_info.instances[0].instance_id }}"
+#    var: webserver_info
+
+- name: add host bastion to ansible inventory
+  add_host:
+    hostname: "{{ webserver_info.instances[0].public_ip_address }}"
+    groups: webserver
+    ansible_ssh_user: "ec2-user"
+    ansible_ssh_private_key_file: "/root/.ssh/vodo_id_rsa"
+
+- name: get rds fact
+  rds_instance_facts:
+    region: "{{ aws_region }}"
+    db_instance_identifier: "{{ django.rds_identifier }}"
+  register: new_database_facts
+
+
+- name: debug rds fact
+  debug:
+    msg: "endpoint: {{ new_database_facts.instances[0].endpoint.address }}"
+
+- name: set_facts database enpoint
+  set_fact:
+    rds_endpoint: "{{ new_database_facts.instances[0].endpoint.address }}"
+
+- name: set_facts webserver public_ip
+  set_fact:
+    web_publicIp: "{{ webserver_info.instances[0].public_ip_address }}"
